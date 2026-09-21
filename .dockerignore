@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+data/warehouse.db
+data/rejected_transactions.csv
+.git/
+.gitignore
+README.md
