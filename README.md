@@ -133,10 +133,38 @@ docker run transaction-etl-pipeline
 
 You should see the same data quality report and pipeline logs shown in the "Results" section above — except now running fully isolated inside the container, with zero local setup beyond having Docker installed.
 
+## Airflow
+
+The pipeline is orchestrated with Apache Airflow — scheduled to run automatically rather than requiring a manual `python src/main.py` trigger, with each stage tracked, logged, and retryable independently.
+
+### Why
+
+A pipeline that only runs when someone remembers to trigger it manually isn't production-ready. Airflow turns Extract, Validate, Transform, and Load into a proper **DAG** (Directed Acyclic Graph) — a defined sequence of tasks with dependencies — scheduled to run daily, with a UI showing exactly what succeeded, failed, and when.
+
+### How it's wired up
+
+The DAG (`airflow/dags/transaction_etl_dag.py`) doesn't reimplement the pipeline logic — it imports and calls the real functions from `src/data_quality.py`, `src/transform.py`, and `src/load.py` directly, via a Docker volume mount. Each pipeline stage becomes its own Airflow task:
+
+```
+extract() >> validate() >> transform() >> load()
+```
+
+Each task only starts after the previous one succeeds, and Airflow's UI visualizes this dependency graph directly.
+
+### How to run it
+
+```bash
+cd airflow
+docker-compose up airflow-init    # first time only - sets up the database
+docker-compose up -d              # starts the scheduler, webserver, and database
+```
+
+Then open `http://localhost:8080` (login: `admin` / `admin`), find the `transaction_etl_pipeline` DAG, unpause it, and trigger it manually — or let it run on its own daily schedule (`0 2 * * *`, 2 AM).
+
 ## Roadmap
 
 - [x] Containerize with Docker
-- [ ] Add Airflow DAG for scheduled orchestration
+- [x] Add Airflow DAG for scheduled orchestration
 - [ ] Add dbt models for the transformation layer
 - [ ] Add unit tests (pytest) for validation rules
 
