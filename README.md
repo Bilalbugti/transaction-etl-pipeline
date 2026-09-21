@@ -99,9 +99,43 @@ In the production version of this pattern (Snowflake-based):
 - The pipeline runs on a schedule via an orchestrator (Airflow), not manually.
 - Data quality thresholds trigger alerts (e.g. Slack/email) if the failure rate exceeds a set threshold, rather than just logging.
 
+## Docker
+
+This pipeline is containerized, so it runs identically on any machine — no need to install Python or pandas locally, just Docker.
+
+### Why
+
+Manually sharing this project meant asking teammates to install the exact right Python version and dependencies themselves — a common source of "works on my machine" failures. Docker packages the pipeline, its dependencies, and the runtime environment into a single portable image.
+
+### What's in the Dockerfile
+
+```dockerfile
+FROM python:3.11-slim       # Start from a clean, official Python environment
+WORKDIR /app                 # Set the working directory inside the container
+COPY requirements.txt .      # Copy dependency list first (caching optimization)
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .                     # Copy the rest of the project files
+CMD ["python", "src/main.py"]  # Run the pipeline when the container starts
+```
+
+### How to build and run it
+
+```bash
+git clone https://github.com/Bilalbugti/transaction-etl-pipeline.git
+cd transaction-etl-pipeline
+
+# Build the image
+docker build -t transaction-etl-pipeline .
+
+# Run the pipeline inside a container
+docker run transaction-etl-pipeline
+```
+
+You should see the same data quality report and pipeline logs shown in the "Results" section above — except now running fully isolated inside the container, with zero local setup beyond having Docker installed.
+
 ## Roadmap
 
-- [ ] Containerize with Docker
+- [x] Containerize with Docker
 - [ ] Add Airflow DAG for scheduled orchestration
 - [ ] Add dbt models for the transformation layer
 - [ ] Add unit tests (pytest) for validation rules
