@@ -1,0 +1,25 @@
+version: 2
+
+sources: []
+
+models:
+  - name: stg_transactions
+    description: "Cleaned, type-cast transaction records from the raw seed data."
+    columns:
+      - name: transaction_id
+        description: "Unique identifier for each transaction."
+        tests:
+          - unique
+          - not_null
+
+      - name: status
+        description: "Transaction status."
+        tests:
+          - accepted_values:
+              values: ['COMPLETED', 'PENDING', 'FAILED', 'REVERSED', 'UNKNOWN_STATUS']
+
+      - name: channel
+        description: "Channel the transaction was made through."
+        tests:
+          - accepted_values:
+              values: ['ATM', 'ONLINE', 'BRANCH', 'MOBILE', 'POS']

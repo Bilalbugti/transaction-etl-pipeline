@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: fct_transactions
+    description: "Business-ready transaction fact table, with derived date/time fields and a high-value flag for reporting."
+    columns:
+      - name: transaction_id
+        description: "Unique identifier for each transaction."
+        tests:
+          - unique
+          - not_null
+
+      - name: account_id
+        description: "Account the transaction belongs to. Never null in this table, since records with missing account_id are filtered out upstream."
+        tests:
+          - not_null
+
+      - name: amount
+        description: "Transaction amount in EUR."
+        tests:
+          - not_null
