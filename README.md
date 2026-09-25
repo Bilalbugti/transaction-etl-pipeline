@@ -161,11 +161,50 @@ docker-compose up -d              # starts the scheduler, webserver, and databas
 
 Then open `http://localhost:8080` (login: `admin` / `admin`), find the `transaction_etl_pipeline` DAG, unpause it, and trigger it manually — or let it run on its own daily schedule (`0 2 * * *`, 2 AM).
 
+## dbt (Data Build Tool)
+
+The transformation layer is also implemented in dbt — SQL-based models with automated data quality tests, running directly in the warehouse rather than pulling data out into Python.
+
+### Why
+
+The Python transformation step (`transform.py`) works, but it has no built-in testing, no auto-generated documentation, and runs outside the warehouse. dbt addresses all three: transformations are plain SQL, tests are declared alongside the models they test, and everything runs where the data already lives.
+
+### Model structure
+
+```
+raw_transactions (seed)
+        │
+        ▼
+stg_transactions      -- cleans types, deduplicates by transaction_id
+        │
+        ▼
+fct_transactions       -- derived fields (date, hour, high-value flag),
+                           filtered by the same quality rules as the
+                           Python pipeline's validate_transactions()
+```
+
+### Tests
+
+9 automated tests run on every `dbt test` — uniqueness and not-null checks on key columns, accepted-value checks on `status` and `channel`, and a custom test (`tests/no_negative_deposits.sql`) mirroring the same business rule check as the Python pipeline: a DEPOSIT transaction should never have a negative amount.
+
+### How to run it
+
+```bash
+pip install dbt-core dbt-duckdb
+cd dbt_transaction_pipeline
+
+dbt seed    # loads the raw transaction data
+dbt run     # builds the staging and marts models
+dbt test    # runs all 9 data quality tests
+```
+
+This demo uses DuckDB (a local, file-based database) so it runs without any cloud credentials — the same dbt code runs against Snowflake in production with just a different `profiles.yml` target.
+
 ## Roadmap
 
 - [x] Containerize with Docker
 - [x] Add Airflow DAG for scheduled orchestration
-- [ ] Add dbt models for the transformation layer
+- [x] Add dbt models for the transformation layer
 - [ ] Add unit tests (pytest) for validation rules
 
 ---
