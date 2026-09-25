@@ -200,11 +200,36 @@ dbt test    # runs all 9 data quality tests
 
 This demo uses DuckDB (a local, file-based database) so it runs without any cloud credentials — the same dbt code runs against Snowflake in production with just a different `profiles.yml` target.
 
+## Spark
+
+The pipeline's data quality and analytical logic is also implemented using PySpark's distributed DataFrame API — demonstrating the approach used once data outgrows what pandas can handle on a single machine.
+
+### Why
+
+pandas loads all data into memory on one machine — fine for this demo's ~20,000 rows, but not viable at the production scale this pipeline is modeled on (5M+ daily records, growing over time). Spark distributes data and computation across multiple machines, so no single machine needs to hold everything in memory.
+
+### What it does
+
+Extract → deduplicate (distributed window function) → validate (same business rules as the Python/dbt versions) → aggregate by channel → rank top accounts by value (window function) → write results as Parquet. All three implementations (pandas, dbt, Spark) agree on the same 95%+ pass rate against the same data.
+
+### How to run it
+
+Runs in Docker to avoid native Java/Spark setup on Windows:
+
+```bash
+cd spark
+docker build -t spark-transaction-analysis .
+docker run spark-transaction-analysis
+```
+
+See [`spark/README.md`](spark/README.md) for full details, including a deliberate note on a Spark performance warning encountered in the ranking step.
+
 ## Roadmap
 
 - [x] Containerize with Docker
 - [x] Add Airflow DAG for scheduled orchestration
 - [x] Add dbt models for the transformation layer
+- [x] Add a Spark version of the pipeline for distributed processing at scale
 - [ ] Add unit tests (pytest) for validation rules
 
 ---
