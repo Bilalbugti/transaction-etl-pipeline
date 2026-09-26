@@ -224,13 +224,38 @@ docker run spark-transaction-analysis
 
 See [`spark/README.md`](spark/README.md) for full details, including a deliberate note on a Spark performance warning encountered in the ranking step.
 
+## CI/CD
+
+Every push automatically triggers two GitHub Actions jobs — no manual verification needed to know if a change broke something.
+
+### Why
+
+Without automated checks, a change to `data_quality.py` could silently break a validation rule, and I wouldn't find out until noticing bad data downstream. GitHub Actions runs tests and the full pipeline automatically, on GitHub's own servers, on every push.
+
+### What runs
+
+- **`test` job:** installs dependencies, runs 13 pytest unit tests covering every validation rule individually, then runs the full pipeline as an integration check
+- **`dbt-test` job:** runs `dbt seed`, `dbt run`, and `dbt test` — the same 9 dbt tests from the transformation layer
+
+See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for the full workflow, and check the **Actions** tab on this repo to see run history.
+
+### Unit tests
+
+13 targeted pytest tests in `tests/` — each one crafts a single-row DataFrame with a specific known issue (missing field, duplicate ID, invalid status, negative deposit) and confirms the validation layer catches exactly that issue. Run locally with:
+
+```bash
+pip install pytest
+pytest tests/ -v
+```
+
 ## Roadmap
 
 - [x] Containerize with Docker
 - [x] Add Airflow DAG for scheduled orchestration
 - [x] Add dbt models for the transformation layer
 - [x] Add a Spark version of the pipeline for distributed processing at scale
-- [ ] Add unit tests (pytest) for validation rules
+- [x] Add unit tests (pytest) for validation rules
+- [x] Add CI/CD with GitHub Actions
 
 ---
 *Note: All data in this repository is synthetically generated for demonstration purposes. No real customer, account, or transaction data is used.*
