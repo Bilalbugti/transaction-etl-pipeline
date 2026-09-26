@@ -1,0 +1,58 @@
+name: CI
+
+# Runs automatically on every push and every pull request targeting main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run unit tests
+        run: pytest tests/ -v
+
+      - name: Run the full pipeline (integration check)
+        run: python src/main.py
+
+  dbt-test:
+    name: Run dbt tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dbt
+        run: pip install dbt-core dbt-duckdb
+
+      - name: Run dbt seed, run, and test
+        working-directory: dbt_transaction_pipeline
+        env:
+          DBT_PROFILES_DIR: .
+        run: |
+          dbt seed
+          dbt run
+          dbt test
